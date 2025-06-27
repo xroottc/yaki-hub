@@ -7,93 +7,147 @@ local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 local Camera = workspace.CurrentCamera
 
---// WINDUI BASE
-local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-local Window = WindUI:CreateWindow({
-    Title = "Yaki Hub",
-    Icon = "star",
-    Author = "Yaki Hub",
-    Folder = "Yaki Hub",
-    Size = UDim2.fromOffset(545, 376),
-    Theme = "Light",
-})
-
-local Tab1 = Window:Tab({ Title = "Shooting", Icon = "target" })
-local Tab2 = Window:Tab({ Title = "Tracking", Icon = "crosshair" })
-local Tab3 = Window:Tab({ Title = "Physics", Icon = "atom" })
-local Tab4 = Window:Tab({ Title = "Settings", Icon = "settings-2" })
-
--- SETTINGS TABLE
+--// SETTINGS
 local settings = {
     Mags = false,
     ReachDistance = 280,
     WalkSpeedEnabled = false,
     WalkSpeedAmount = 16,
-    AimbotType = 'low',
+    AimbotType = "low",
     ShotDelay = 0.32,
     Arc = 0,
     YAxis = 0,
     CamlockEnabled = false,
-    ESPEnabled = false,
 }
 
--- AIMBOT SETTINGS
-Tab1:Dropdown({
-    Title = "Aimbot Type",
-    Values = { "None", "Low", "High", "Random" },
-    Value = "Low",
-    Multi = false,
-    AllowNone = false,
+--// RAYFIELD UI
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nevcit/UI-Library/main/Loadstring/RayfieldLib"))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "Yaki Hub",
+    LoadingTitle = "Yaki Hub",
+    SaveConfig = true,
+    ConfigFolder = "YakiHubConfigs"
+})
+
+local Tab_Shooting = Window:CreateTab("Shooting")
+local Tab_Tracking = Window:CreateTab("Tracking")
+local Tab_Physics  = Window:CreateTab("Physics")
+local Tab_Settings = Window:CreateTab("Settings")
+
+--// UI ELEMENTS --
+
+-- Shooting Tab
+
+Tab_Shooting:CreateDropdown({
+    Name = "Aimbot Type",
+    Options = {"None", "Low", "High", "Random"},
+    CurrentOption = settings.AimbotType:gsub("^%l", string.upper),
+    Flag = "AimbotType",
     Callback = function(val)
         settings.AimbotType = val:lower()
         _G.Aimbot = settings.AimbotType
-    end
+    end,
 })
 
-Tab1:Slider({
-    Title = "Shot Delay",
-    Step = 0.01,
-    Min = 0,
-    Max = 0.5,
-    Default = settings.ShotDelay,
+Tab_Shooting:CreateSlider({
+    Name = "Shot Delay",
+    Range = {0, 0.5},
+    Increment = 0.01,
+    CurrentValue = settings.ShotDelay,
+    Flag = "ShotDelay",
     Callback = function(val)
         settings.ShotDelay = val
         _G.ShotDelay = val
-    end
+    end,
 })
 
-Tab1:Slider({
-    Title = "Arc Amount",
-    Step = 1,
-    Min = 0,
-    Max = 15,
-    Default = settings.Arc,
+Tab_Shooting:CreateSlider({
+    Name = "Arc Amount",
+    Range = {0, 15},
+    Increment = 1,
+    CurrentValue = settings.Arc,
+    Flag = "ArcAmount",
     Callback = function(val)
         settings.Arc = val
         _G.Arc = val
-    end
+    end,
 })
 
-Tab1:Slider({
-    Title = "Y Axis",
-    Step = 1,
-    Min = 0,
-    Max = 100,
-    Default = settings.YAxis,
+Tab_Shooting:CreateSlider({
+    Name = "Y Axis",
+    Range = {0, 100},
+    Increment = 1,
+    CurrentValue = settings.YAxis,
+    Flag = "YAxis",
     Callback = function(val)
         settings.YAxis = val
         _G.YAxis = val
-    end
+    end,
 })
 
-Tab1:Toggle({
-    Title = "Enable Camlock",
-    Type = "Checkbox",
-    Default = false,
+Tab_Shooting:CreateToggle({
+    Name = "Enable Camlock",
+    CurrentValue = settings.CamlockEnabled,
+    Flag = "Camlock",
     Callback = function(state)
         settings.CamlockEnabled = state
-    end
+    end,
 })
+
+-- Tracking Tab (Placeholder for future)
+
+-- Physics Tab
+
+Tab_Physics:CreateToggle({
+    Name = "Enable Magnet",
+    CurrentValue = settings.Mags,
+    Flag = "Magnet",
+    Callback = function(state)
+        settings.Mags = state
+    end,
+})
+
+Tab_Physics:CreateSlider({
+    Name = "Magnet Distance",
+    Range = {0, 300},
+    Increment = 1,
+    CurrentValue = settings.ReachDistance,
+    Flag = "MagnetDistance",
+    Callback = function(val)
+        settings.ReachDistance = val
+    end,
+})
+
+Tab_Physics:CreateToggle({
+    Name = "Enable WalkSpeed",
+    CurrentValue = settings.WalkSpeedEnabled,
+    Flag = "WalkSpeedToggle",
+    Callback = function(state)
+        settings.WalkSpeedEnabled = state
+        local Humanoid = Character:FindFirstChild("Humanoid")
+        if Humanoid then
+            Humanoid.WalkSpeed = state and settings.WalkSpeedAmount or 16
+        end
+    end,
+})
+
+Tab_Physics:CreateSlider({
+    Name = "Speed Amount",
+    Range = {16, 100},
+    Increment = 1,
+    CurrentValue = settings.WalkSpeedAmount,
+    Flag = "WalkSpeedAmount",
+    Callback = function(val)
+        settings.WalkSpeedAmount = val
+        local Humanoid = Character:FindFirstChild("Humanoid")
+        if Humanoid and settings.WalkSpeedEnabled then
+            Humanoid.WalkSpeed = val
+        end
+    end,
+})
+
+--// FUNCTIONALITY
 
 RunService.RenderStepped:Connect(function()
     if settings.CamlockEnabled then
@@ -104,7 +158,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- JUMP SHOT (SILENT AIM)
 Character:WaitForChild("Humanoid").Jumping:Connect(function()
     if Character:FindFirstChild("Basketball") then
         local closestGoal, closestDist, power = nil, math.huge, 75
@@ -127,35 +180,23 @@ Character:WaitForChild("Humanoid").Jumping:Connect(function()
             elseif closestDist > 62 and closestDist <= 68 then adjustY = 48
             elseif closestDist > 68 and closestDist <= 73 then adjustY = 58 end
             local adjustedPos = closestGoal.Position + Vector3.new(0, adjustY, 0)
+
             Camera.CFrame = CFrame.new(Camera.CFrame.Position, adjustedPos)
+
             task.wait(settings.ShotDelay)
-            VirtualInputManager:SendMouseButtonEvent(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2 + settings.YAxis, 0, true, game, 1)
+
+            VirtualInputManager:SendMouseButtonEvent(
+                workspace.CurrentCamera.ViewportSize.X / 2,
+                workspace.CurrentCamera.ViewportSize.Y / 2 + settings.YAxis,
+                0, true, game, 1)
             task.wait(0.05)
-            VirtualInputManager:SendMouseButtonEvent(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2 + settings.YAxis, 0, false, game, 1)
+            VirtualInputManager:SendMouseButtonEvent(
+                workspace.CurrentCamera.ViewportSize.X / 2,
+                workspace.CurrentCamera.ViewportSize.Y / 2 + settings.YAxis,
+                0, false, game, 1)
         end
     end
 end)
-
--- PHYSICS TAB
-Tab3:Toggle({
-    Title = "Enable Magnet",
-    Type = "Checkbox",
-    Default = false,
-    Callback = function(state)
-        settings.Mags = state
-    end
-})
-
-Tab3:Slider({
-    Title = "Magnet Distance",
-    Step = 1,
-    Min = 0,
-    Max = 300,
-    Default = settings.ReachDistance,
-    Callback = function(val)
-        settings.ReachDistance = val
-    end
-})
 
 RunService.RenderStepped:Connect(function()
     if settings.Mags then
@@ -187,98 +228,4 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end
-end)
-
-Tab3:Toggle({
-    Title = "Enable WalkSpeed",
-    Type = "Checkbox",
-    Default = false,
-    Callback = function(state)
-        settings.WalkSpeedEnabled = state
-        local Humanoid = Character:FindFirstChild("Humanoid")
-        if Humanoid then
-            Humanoid.WalkSpeed = state and settings.WalkSpeedAmount or 16
-        end
-    end
-})
-
-Tab3:Slider({
-    Title = "Speed Amount",
-    Step = 1,
-    Min = 16,
-    Max = 100,
-    Default = settings.WalkSpeedAmount,
-    Callback = function(val)
-        settings.WalkSpeedAmount = val
-        local Humanoid = Character:FindFirstChild("Humanoid")
-        if Humanoid and settings.WalkSpeedEnabled then
-            Humanoid.WalkSpeed = val
-        end
-    end
-})
-
--- ESP
-local function createESP(player)
-    if player == LocalPlayer then return end
-    local character = player.Character or player.CharacterAdded:Wait()
-    local head = character:WaitForChild("Head", 5)
-    if not head then return end
-
-    local tag = Instance.new("BillboardGui")
-    tag.Name = "YakiESP"
-    tag.Adornee = head
-    tag.Size = UDim2.new(0, 200, 0, 50)
-    tag.StudsOffset = Vector3.new(0, 2.5, 0)
-    tag.AlwaysOnTop = true
-    tag.Parent = head
-
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(1, 0, 1, 0)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = player.Name
-    nameLabel.TextColor3 = Color3.new(1, 0, 0)
-    nameLabel.TextStrokeTransparency = 0.5
-    nameLabel.TextScaled = true
-    nameLabel.Font = Enum.Font.SourceSansBold
-    nameLabel.Parent = tag
-end
-
-local function removeESP(player)
-    if player.Character and player.Character:FindFirstChild("Head") then
-        local esp = player.Character.Head:FindFirstChild("YakiESP")
-        if esp then
-            esp:Destroy()
-        end
-    end
-end
-
-Tab2:Toggle({
-    Title = "Enable ESP",
-    Type = "Checkbox",
-    Default = false,
-    Callback = function(state)
-        settings.ESPEnabled = state
-        if state then
-            for _, player in ipairs(Players:GetPlayers()) do
-                createESP(player)
-            end
-        else
-            for _, player in ipairs(Players:GetPlayers()) do
-                removeESP(player)
-            end
-        end
-    end
-})
-
-Players.PlayerAdded:Connect(function(player)
-    if settings.ESPEnabled then
-        player.CharacterAdded:Connect(function()
-            task.wait(1)
-            createESP(player)
-        end)
-    end
-end)
-
-Players.PlayerRemoving:Connect(function(player)
-    removeESP(player)
 end)
