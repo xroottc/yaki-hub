@@ -23,7 +23,7 @@ local Tab2 = Window:Tab({ Title = "Tracking", Icon = "crosshair" })
 local Tab3 = Window:Tab({ Title = "Physics", Icon = "atom" })
 local Tab4 = Window:Tab({ Title = "Settings", Icon = "settings-2" })
 
--- SETTINGS
+-- SETTINGS TABLE
 local settings = {
     Mags = false,
     ReachDistance = 280,
@@ -33,10 +33,11 @@ local settings = {
     ShotDelay = 0.32,
     Arc = 0,
     YAxis = 0,
-    CamlockEnabled = false
+    CamlockEnabled = false,
+    ESPEnabled = false,
 }
 
--- Aimbot Type
+-- AIMBOT SETTINGS
 Tab1:Dropdown({
     Title = "Aimbot Type",
     Values = { "None", "Low", "High", "Random" },
@@ -49,7 +50,6 @@ Tab1:Dropdown({
     end
 })
 
--- Shot Delay
 Tab1:Slider({
     Title = "Shot Delay",
     Step = 0.01,
@@ -62,7 +62,6 @@ Tab1:Slider({
     end
 })
 
--- Arc Amount
 Tab1:Slider({
     Title = "Arc Amount",
     Step = 1,
@@ -75,7 +74,6 @@ Tab1:Slider({
     end
 })
 
--- Y Axis
 Tab1:Slider({
     Title = "Y Axis",
     Step = 1,
@@ -88,7 +86,6 @@ Tab1:Slider({
     end
 })
 
--- Camlock Toggle
 Tab1:Toggle({
     Title = "Enable Camlock",
     Type = "Checkbox",
@@ -107,7 +104,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Silent Aim Jump Trigger
+-- JUMP SHOT (SILENT AIM)
 Character:WaitForChild("Humanoid").Jumping:Connect(function()
     if Character:FindFirstChild("Basketball") then
         local closestGoal, closestDist, power = nil, math.huge, 75
@@ -130,25 +127,16 @@ Character:WaitForChild("Humanoid").Jumping:Connect(function()
             elseif closestDist > 62 and closestDist <= 68 then adjustY = 48
             elseif closestDist > 68 and closestDist <= 73 then adjustY = 58 end
             local adjustedPos = closestGoal.Position + Vector3.new(0, adjustY, 0)
-
             Camera.CFrame = CFrame.new(Camera.CFrame.Position, adjustedPos)
-
             task.wait(settings.ShotDelay)
-
-            VirtualInputManager:SendMouseButtonEvent(
-                workspace.CurrentCamera.ViewportSize.X / 2,
-                workspace.CurrentCamera.ViewportSize.Y / 2 + settings.YAxis,
-                0, true, game, 1)
+            VirtualInputManager:SendMouseButtonEvent(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2 + settings.YAxis, 0, true, game, 1)
             task.wait(0.05)
-            VirtualInputManager:SendMouseButtonEvent(
-                workspace.CurrentCamera.ViewportSize.X / 2,
-                workspace.CurrentCamera.ViewportSize.Y / 2 + settings.YAxis,
-                0, false, game, 1)
+            VirtualInputManager:SendMouseButtonEvent(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2 + settings.YAxis, 0, false, game, 1)
         end
     end
 end)
 
--- Magnet Toggle
+-- PHYSICS TAB
 Tab3:Toggle({
     Title = "Enable Magnet",
     Type = "Checkbox",
@@ -158,7 +146,6 @@ Tab3:Toggle({
     end
 })
 
--- Magnet Distance Slider
 Tab3:Slider({
     Title = "Magnet Distance",
     Step = 1,
@@ -170,40 +157,38 @@ Tab3:Slider({
     end
 })
 
--- Magnet Behavior
 RunService.RenderStepped:Connect(function()
-	if settings.Mags then
-		local ball, dist = nil, math.huge
-		for _, v in pairs(workspace:GetDescendants()) do
-			if v:IsA("BasePart") and (v.Name == "Basketball" or v.Name == "Ball") then
-				local d = (HumanoidRootPart.Position - v.Position).Magnitude
-				if d < dist then
-					ball = v
-					dist = d
-				end
-			end
-		end
-		if ball and dist <= settings.ReachDistance then
-			local closestPart, closestDist = nil, math.huge
-			for _, p in ipairs(Character:GetDescendants()) do
-				if p:IsA("BasePart") then
-					local d = (p.Position - ball.Position).Magnitude
-					if d < closestDist then
-						closestPart = p
-						closestDist = d
-					end
-				end
-			end
-			if closestPart then
-				firetouchinterest(closestPart, ball, 0)
-				task.wait()
-				firetouchinterest(closestPart, ball, 1)
-			end
-		end
-	end
+    if settings.Mags then
+        local ball, dist = nil, math.huge
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and (v.Name == "Basketball" or v.Name == "Ball") then
+                local d = (HumanoidRootPart.Position - v.Position).Magnitude
+                if d < dist then
+                    ball = v
+                    dist = d
+                end
+            end
+        end
+        if ball and dist <= settings.ReachDistance then
+            local closestPart, closestDist = nil, math.huge
+            for _, p in ipairs(Character:GetDescendants()) do
+                if p:IsA("BasePart") then
+                    local d = (p.Position - ball.Position).Magnitude
+                    if d < closestDist then
+                        closestPart = p
+                        closestDist = d
+                    end
+                end
+            end
+            if closestPart then
+                firetouchinterest(closestPart, ball, 0)
+                task.wait()
+                firetouchinterest(closestPart, ball, 1)
+            end
+        end
+    end
 end)
 
--- WalkSpeed Toggle
 Tab3:Toggle({
     Title = "Enable WalkSpeed",
     Type = "Checkbox",
@@ -217,7 +202,6 @@ Tab3:Toggle({
     end
 })
 
--- WalkSpeed Slider
 Tab3:Slider({
     Title = "Speed Amount",
     Step = 1,
@@ -232,3 +216,69 @@ Tab3:Slider({
         end
     end
 })
+
+-- ESP
+local function createESP(player)
+    if player == LocalPlayer then return end
+    local character = player.Character or player.CharacterAdded:Wait()
+    local head = character:WaitForChild("Head", 5)
+    if not head then return end
+
+    local tag = Instance.new("BillboardGui")
+    tag.Name = "YakiESP"
+    tag.Adornee = head
+    tag.Size = UDim2.new(0, 200, 0, 50)
+    tag.StudsOffset = Vector3.new(0, 2.5, 0)
+    tag.AlwaysOnTop = true
+    tag.Parent = head
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 1, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = player.Name
+    nameLabel.TextColor3 = Color3.new(1, 0, 0)
+    nameLabel.TextStrokeTransparency = 0.5
+    nameLabel.TextScaled = true
+    nameLabel.Font = Enum.Font.SourceSansBold
+    nameLabel.Parent = tag
+end
+
+local function removeESP(player)
+    if player.Character and player.Character:FindFirstChild("Head") then
+        local esp = player.Character.Head:FindFirstChild("YakiESP")
+        if esp then
+            esp:Destroy()
+        end
+    end
+end
+
+Tab2:Toggle({
+    Title = "Enable ESP",
+    Type = "Checkbox",
+    Default = false,
+    Callback = function(state)
+        settings.ESPEnabled = state
+        if state then
+            for _, player in ipairs(Players:GetPlayers()) do
+                createESP(player)
+            end
+        else
+            for _, player in ipairs(Players:GetPlayers()) do
+                removeESP(player)
+            end
+        end
+    end
+})
+
+Players.PlayerAdded:Connect(function(player)
+    if settings.ESPEnabled then
+        player.CharacterAdded:Connect(function()
+            task.wait(1)
+            createESP(player)
+        end)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    removeESP(player)
+end)
